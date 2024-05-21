@@ -43,23 +43,36 @@ func Get(k any) (v any, ok bool) {
 }
 
 func updQueue(k any) {
-	// get element position in queue
-	idx := inMemoryIdx.getIndex(k)
-	// not found in queue
+	idx := inMemoryIdx.getIdx(k)
+	// when element is missing from queue
+	// upd queue and move it to first position
 	if idx < 0 {
-		// add new key to queue
-		inMemoryIdx.add(k)
-	} else {
-		// move element to front of queue
-		inMemoryIdx.swap(idx)
+		lastPosition := len(inMemoryIdx.list) - 1
+		inMemoryIdx.list[lastPosition] = k
+		inMemoryIdx.swap(lastPosition)
+
 	}
 
 }
+
+// func updQueue(k any) {
+// // get element position in queue
+// idx := inMemoryIdx.getIndex(k)
+// // not found in queue
+// if idx < 0 {
+// // add new key to queue
+// inMemoryIdx.add(k)
+// } else {
+// // move element to front of queue
+// inMemoryIdx.swap(idx)
+// }
+//
+// }
 
 // NewQueue creates new inmemory store and queue
 // each instance of `once` creates new store and queue
 func NewQueue(once *sync.Once, s int) {
 	once.Do(func() {
-		inMemoryIdx = make(inMemoryQueue, s)
+		inMemoryIdx = new(s)
 	})
 }
