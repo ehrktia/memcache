@@ -1,7 +1,6 @@
 package datastructure
 
 import (
-	"cmp"
 	"fmt"
 	"reflect"
 	"sync"
@@ -79,7 +78,7 @@ func Test_conc_map(t *testing.T) {
 			t.Fatalf("expected-%v,got-%v", value, reflect.ValueOf(v).String())
 		}
 		// check queue position and ensure is top of queue
-		val := inMemoryIdx[0]
+		val := inMemoryIdx.list[0]
 		if reflect.ValueOf(val).String() != k {
 			t.Fatalf("expected-%v,got-%v", k, reflect.ValueOf(val).String())
 		}
@@ -104,44 +103,45 @@ func Test_queue(t *testing.T) {
 	// setup the queue
 	once := &sync.Once{}
 	setup(once)
-	t.Run("check for space in queue", func(t *testing.T) {
-		got := inMemoryIdx.check()
-		if cmp.Compare(got, 0) != 0 {
-			t.Fatalf("expected-%d\tgot-%d\n", 0, got)
-		}
-	})
 
 	t.Run("add new element to queue", func(t *testing.T) {
 		k := t.Name()
 		inMemoryIdx.add(k)
-		if inMemoryIdx[0] == nil {
-			t.Fatalf("expected-%s,got-%s", t.Name(), inMemoryIdx[0])
+		if inMemoryIdx.list[0] == nil {
+			t.Fatalf("expected-%s,got-%s", t.Name(), inMemoryIdx.list[0])
 		}
 	})
 
 	t.Run("evict last element when queue is full", func(t *testing.T) {
 		// fill the queue with data
-		totLen := len(inMemoryIdx)
+		totLen := len(inMemoryIdx.list)
 		for i := 0; i < totLen-1; i++ {
 			k := t.Name()
 			inMemoryIdx.add(k)
 		}
 		// check if queue is full
 		for i := 0; i < totLen-1; i++ {
-			if inMemoryIdx[i] == nil {
-				t.Fatalf("expected-%v,got-%v", t.Name(), inMemoryIdx[i])
+			if inMemoryIdx.list[i] == nil {
+				t.Fatalf("expected-%v,got-%v", t.Name(), inMemoryIdx.list[i])
 			}
 
 		}
-		// element to be removed is last element
-		got := inMemoryIdx.check()
-		if got != totLen-1 {
-			t.Fatalf("expected-%d,got-%d", totLen-1, got)
-		}
 		// evict
 		inMemoryIdx.evict()
-		if inMemoryIdx[totLen-1] != nil {
-			t.Fatalf("expected-%v,got-%v", nil, inMemoryIdx[totLen-1])
+		if inMemoryIdx.list[totLen-1] != nil {
+			t.Fatalf("expected-%v,got-%v", nil, inMemoryIdx.list[totLen-1])
 		}
 	})
+}
+
+func Test_add_queue(t *testing.T) {
+	size := 10
+	testQueue := new(size)
+	for i := 1; i <= size; i++ {
+		testQueue.add(i)
+		// t.Logf("test queue:%v\n", testQueue.list)
+		// t.Logf("test queue:%v\n", testQueue.listPoint)
+
+	}
+
 }
