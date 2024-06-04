@@ -1,6 +1,5 @@
 package datastructure
 
-// TODO: make it concurrent using channels
 import (
 	"strings"
 	"sync"
