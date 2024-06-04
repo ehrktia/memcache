@@ -6,15 +6,12 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+
+	"github.com/ehrktia/memcache/datastructure"
 )
 
-type Data struct {
-	Key   any `json:"key"`
-	Value any `json:"value"`
-}
-
-func extractReqData(b *bytes.Buffer) (*Data, error) {
-	d := new(Data)
+func extractReqData(b *bytes.Buffer) (*datastructure.Data, error) {
+	d := new(datastructure.Data)
 	if err := json.Unmarshal(b.Bytes(), d); err != nil {
 		return d, err
 	}

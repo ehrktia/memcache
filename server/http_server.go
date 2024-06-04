@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"time"
+	"strings"
 
 	"github.com/ehrktia/memcache/datastructure"
 )
@@ -26,6 +27,7 @@ func NewHTTPServer() *http.Server {
 	fmt.Println("starting server in port:", addr)
 	return s
 }
+
 
 func Store(res http.ResponseWriter, req *http.Request) {
 	defer req.Body.Close()
@@ -48,6 +50,7 @@ func Store(res http.ResponseWriter, req *http.Request) {
 			return
 		}
 	}
+
 	result, _ := datastructure.Add(d.Key, d.Value)
 	if result != nil {
 		_, err := json.Marshal(result)
@@ -83,9 +86,9 @@ func Get(res http.ResponseWriter, req *http.Request) {
 		}
 	}
 	// get data from cache
-	v, ok := datastructure.Get(d.Key)
+	v:= datastructure.Get(d.Key)
 	// data not found
-	if !ok {
+	if strings.EqualFold(v.(string),datastructure.NotFound){
 		err := fmt.Errorf("%v matching value not found", d.Key)
 		if err := writeResponse(res, []byte(err.Error())); err != nil {
 			return
