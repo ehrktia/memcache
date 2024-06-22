@@ -11,9 +11,9 @@ import (
 
 func Test_encode_decode(t *testing.T) {
 	testWal := new()
-	fileName := fileName()
+	fileName := testWal.WalFile()
 	b := &bytes.Buffer{}
-	if err := createFile(); err != nil {
+	if err := testWal.createFile(); err != nil {
 		t.Fatal(err)
 	}
 	d := &datastructure.Data{
@@ -40,9 +40,9 @@ func Test_encode_decode(t *testing.T) {
 
 func Test_encode_read_at(t *testing.T) {
 	testWal := new()
-	fileName:=fileName()
+	fileName := testWal.WalFile()
 	b := &bytes.Buffer{}
-	if err := createFile(); err != nil {
+	if err := testWal.createFile(); err != nil {
 		t.Fatal(err)
 	}
 	d := &datastructure.Data{

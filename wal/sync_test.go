@@ -14,9 +14,9 @@ func Test_compare_file_size(t *testing.T) {
 	// create test file and write some data
 	// for testing
 	testWal := new()
-	fileName := fileName()
+	fileName := testWal.WalFile()
 	// test file operations
-	if err := createFile(); err != nil {
+	if err := testWal.createFile(); err != nil {
 		t.Fatal(err)
 	}
 	// open file to add some data
@@ -52,9 +52,9 @@ func Test_upd_in_memory_cache(t *testing.T) {
 	// create test file and write some data
 	// for testing
 	testWal := new()
-	fileName := fileName()
+	fileName := testWal.WalFile()
 	// test file operations
-	if err := createFile(); err != nil {
+	if err := testWal.createFile(); err != nil {
 		t.Fatal(err)
 	}
 	// open file to add some data
