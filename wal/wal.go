@@ -8,28 +8,25 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 // receive data and persist in file
 // keep track of pointer up to where the data is being loaded in to cache
 
 type Wal struct {
-	filePointer int
-	size        int
-	fileName    string
-}
-
-func fileName() string {
-	home := os.Getenv("HOME")
-	fileName := filepath.Join(home, ".local", "wal.txt")
-	return fileName
+	filePointer   int
+	size          int
+	stamp         int64
+	fileName      string
+	defaultWalDir string
 }
 
 // createFile checks if file exist
 // and create new file when not found
-func createFile() error {
-	if !exists() {
-		_, err := os.Create(fileName())
+func (w *Wal) createFile() error {
+	if !w.exists() {
+		_, err := os.Create(w.fileName)
 		if err != nil {
 			return err
 		}
@@ -39,10 +36,15 @@ func createFile() error {
 
 // creates file if one does not exist
 func new() *Wal {
+	now := time.Now().UnixMicro()
+	home := os.Getenv("HOME")
+	local := ".local"
 	return &Wal{
-		filePointer: 0,
-		size:        4096,
-		fileName:    fileName(),
+		filePointer:   0,
+		size:          4096,
+		stamp:         now,
+		defaultWalDir: filepath.Join(home, local),
+		fileName:      filepath.Join(home, local, fmt.Sprintf("wal-%d.txt", now)),
 	}
 }
 
@@ -50,12 +52,15 @@ func (w *Wal) WalFile() string {
 	return w.fileName
 }
 
-func exists() bool {
-	f, err := os.Open(fileName())
+func (w *Wal) exists() bool {
+	f, err := os.Open(w.fileName)
 	if err != nil && errors.Is(err, os.ErrNotExist) {
 		return false
 	}
-	f.Close()
+	if err := f.Close(); err != nil {
+		fmt.Fprintf(os.Stderr, "error:[%v] closing-%s file\n", err, w.WalFile())
+		os.Exit(1)
+	}
 	return true
 }
 
