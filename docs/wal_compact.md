@@ -1,3 +1,11 @@
+### wal cache sync approach
+
+- data is persisted in wal file
+
+- at end of persistance, trigger update to cache
+
+
+
 ### compaction approach
 
 - wal file exists
@@ -36,8 +44,8 @@
 
 **Todo**
 
-- [ ]  find a way to recover from failure and deal with multiple wal files during recovery cycle
+- [ ] find a way to recover from failure and deal with multiple wal files during recovery cycle
 
-- [ ]  what happens when drive used to store archive is full
+- [ ] what happens when drive used to store archive is full
 
-- [ ]  dependency on `.local` folder in `home` location 
+- [ ] dependency on `.local` folder in `home` location 

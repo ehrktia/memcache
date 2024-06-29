@@ -1,32 +1,34 @@
 package wal
 
 import (
-	"bufio"
-	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/ehrktia/memcache/datastructure"
 )
 
 // receive data and persist in file
 // keep track of pointer up to where the data is being loaded in to cache
 
 type Wal struct {
-	filePointer   int
-	size          int
-	stamp         int64
-	fileName      string
-	defaultWalDir string
+	fileName
+}
+
+type fileName struct {
+	defaultWalDir   string
+	fileName        string
+	archiveFileName string
 }
 
 // createFile checks if file exist
 // and create new file when not found
-func (w *Wal) createFile() error {
-	if !w.exists() {
-		_, err := os.Create(w.fileName)
+func CreateFile(fileName string) error {
+	if !exists(fileName) {
+		_, err := os.Create(fileName)
 		if err != nil {
 			return err
 		}
@@ -34,31 +36,62 @@ func (w *Wal) createFile() error {
 	return nil
 }
 
-// creates file if one does not exist
-func new() *Wal {
-	now := time.Now().UnixMicro()
+func (w *Wal) WalFileName() string {
+	return w.fileName.fileName
+}
+
+func (w *Wal) updWalFile(file string) {
+	walFile := filepath.Join(w.defaultWalDir, file)
+	w.fileName.fileName = walFile
+}
+
+func genWalDir() string {
 	home := os.Getenv("HOME")
-	local := ".local"
-	return &Wal{
-		filePointer:   0,
-		size:          4096,
-		stamp:         now,
-		defaultWalDir: filepath.Join(home, local),
-		fileName:      filepath.Join(home, local, fmt.Sprintf("wal-%d.txt", now)),
+	local := os.Getenv("LOCAL")
+	var walFileDir string
+	if local == "" {
+		local = ".local"
+		walFileDir = filepath.Join(home, local)
+		return walFileDir
+	} else {
+		walFileDir = filepath.Join(home, local)
+		return walFileDir
 	}
 }
 
-func (w *Wal) WalFile() string {
-	return w.fileName
+func genArchiveDir() string {
+	archiveDir := os.Getenv("ARCHIVE_DIR")
+	if archiveDir == "" {
+		return genWalDir()
+	}
+	return archiveDir
 }
 
-func (w *Wal) exists() bool {
-	f, err := os.Open(w.fileName)
+// creates file if one does not exist
+func NewWal() *Wal {
+	defaultMaxFileSize = getDefaultFileSize()
+	now := time.Now().UnixMicro()
+	defaultDir := genWalDir()
+	archiveDir := genArchiveDir()
+	archiveName := fmt.Sprintf("archive-%d.tar", now)
+	walFileName := filepath.Join(defaultDir, fmt.Sprintf("wal-%d.txt", now))
+	archiveFileName := filepath.Join(archiveDir, archiveName)
+	return &Wal{
+		fileName{
+			defaultWalDir:   defaultDir,
+			fileName:        walFileName,
+			archiveFileName: archiveFileName,
+		},
+	}
+}
+
+func exists(fileName string) bool {
+	f, err := os.Open(fileName)
 	if err != nil && errors.Is(err, os.ErrNotExist) {
 		return false
 	}
 	if err := f.Close(); err != nil {
-		fmt.Fprintf(os.Stderr, "error:[%v] closing-%s file\n", err, w.WalFile())
+		fmt.Fprintf(os.Stderr, "error:[%v] closing-%q file\n", err, fileName)
 		os.Exit(1)
 	}
 	return true
@@ -67,84 +100,20 @@ func (w *Wal) exists() bool {
 var ErrEmptyFile = errors.New("empty file")
 var ErrRead = errors.New("no data to read")
 
-// Read uses a temp buffer of size 4096
-// read data to buffer and returns number of bytes
-// read along with data
-func (w *Wal) Read(b *bytes.Buffer) error {
-	// open file
-	f, err := os.Open(w.fileName)
-	defer func() {
-		if err := f.Close(); err != nil {
-			fmt.Fprint(os.Stderr, "error closing file when trying to Read")
-		}
-	}()
-	if err != nil {
+// UpdCache writes data into wal for persisence
+// and triggers cache update, adds data in to cache
+func UpdCache(w *Wal, data []byte) error {
+	if _, err := Write(w.fileName.fileName, data); err != nil {
 		return err
 	}
-	// get file size
-	fileInfo, err := f.Stat()
-	if err != nil {
+	// trigger cache update
+	d := new(datastructure.Data)
+	if err := json.Unmarshal(data, d); err != nil {
 		return err
 	}
-	// file empty exit
-	if fileInfo.Size() == 0 {
-		return ErrEmptyFile
-	}
-	// reader
-	bufReader := bufio.NewReaderSize(f, w.size)
-	// write to buffer
-	_, err = bufReader.Read(b.Bytes())
-	if err != nil && !errors.Is(err, ErrRead) {
-		return err
-	}
-	// when file has no more data
-	if errors.Is(err, ErrRead) {
-		return ErrRead
-	}
-
-	return nil
-}
-
-func (w *Wal) Write(data []byte) (int, error) {
-	f, err := os.OpenFile(w.fileName, os.O_RDWR, 0666)
-	defer func() {
-		if err := f.Close(); err != nil {
-			fmt.Fprint(os.Stderr, "error closing file when trying to Read")
-		}
-	}()
-	if err != nil {
-		return 0, err
-	}
-	n, err := f.Write(data)
-	if err != nil && errors.Is(err, os.ErrPermission) {
-		return 0, os.ErrPermission
-	}
-	if err := f.Sync(); err != nil {
-		return 0, err
-	}
-	return n, nil
-}
-
-func (w *Wal) ReadAt(b *bytes.Buffer) error {
-	f, err := os.Open(w.fileName)
-	defer func() {
-		if err := f.Close(); err != nil {
-			fmt.Fprint(os.Stderr, "error closing file when trying to Read")
-		}
-	}()
-	if err != nil {
-		return err
-	}
-	buf := make([]byte, w.size)
-	n, err := f.ReadAt(buf, int64(w.filePointer))
-	if err != nil && !errors.Is(err, io.EOF) {
-		return err
-	}
-	w.filePointer = w.filePointer + n
-	// write output to buffer
-	_, err = b.Write(buf)
-	if err != nil {
-		return err
+	v, isLoaded := datastructure.Add(d.Key, d.Value)
+	if isLoaded {
+		fmt.Fprintf(os.Stdout, "[INFO]: cache value already found, updated with:%v\n", v)
 	}
 	return nil
 }

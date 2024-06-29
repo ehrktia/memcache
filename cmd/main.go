@@ -12,6 +12,7 @@ import (
 
 	"github.com/ehrktia/memcache/datastructure"
 	"github.com/ehrktia/memcache/server"
+	"github.com/ehrktia/memcache/wal"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -26,18 +27,27 @@ func main() {
 	createDataStruct(once, queueSize)
 	// start http
 	mux := http.NewServeMux()
-	httpServer := server.NewHTTPServer()
-	registerHandler(mux)
-	httpServer.Handler = mux
+	w := wal.NewWal()
+	walFile := w.WalFileName()
+	webServer := server.NewWebServer(w, server.NewHTTPServer())
+	webServer.Server.Handler = mux
+	registerHandler(mux, webServer)
 	// wait for interrupt
 	shutdown(sig)
-	// start server
 	eg, _ := errgroup.WithContext(ctx)
-	eg.Go(func() error { return httpServer.ListenAndServe() })
-	// stop app in case of error
+	// create wal file
+	eg.Go(func() error {
+		return wal.CreateFile(walFile)
+	})
+	eg.Go(func() error {
+		return wal.Compact(w)
+	})
+	eg.Go(func() error {
+		return webServer.Server.ListenAndServe()
+	})
 	if err := eg.Wait(); err != nil {
-		fmt.Fprintf(os.Stderr, "%v", err)
-		os.Exit(0)
+		fmt.Fprintf(os.Stderr, "error:%v\n", err)
+		os.Exit(1)
 	}
 }
 
@@ -46,9 +56,10 @@ func createDataStruct(once *sync.Once, queueSize int) {
 
 }
 
-func registerHandler(mux *http.ServeMux) {
-	mux.HandleFunc("/save", server.Store)
-	mux.HandleFunc("/get", server.Get)
+func registerHandler(mux *http.ServeMux, w *server.WebServer) {
+	mux.HandleFunc("/save", w.Store)
+	mux.HandleFunc("/get", w.Get)
+	mux.HandleFunc("/getall", w.GetAll)
 }
 
 func shutdown(s chan os.Signal) {
@@ -63,7 +74,7 @@ func shutdown(s chan os.Signal) {
 func getQueueSize() int {
 	size := os.Getenv("QUEUE_SIZE")
 	if size == "" {
-		size = "10"
+		size = "50"
 	}
 	s, err := strconv.Atoi(size)
 	if err != nil {

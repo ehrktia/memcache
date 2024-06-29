@@ -10,7 +10,6 @@ import (
 	"io"
 	"io/fs"
 	"os"
-	"path/filepath"
 	"strconv"
 	"time"
 )
@@ -21,50 +20,100 @@ const DEFAULT_SIZE = "DEFAULT_SIZE"
 
 // getDefaultFileSize gets the configured
 // allowed file size for wal, when none defined
-// it uses default `3*4096` as size
-func getDefaultFileSize() {
+// it uses default as size
+func getDefaultFileSize() int64 {
 	ev := os.Getenv(DEFAULT_SIZE)
 	if ev == "" {
-		ev = getDefaultSize()
+		return int64(4096)
 	}
 	fs, err := strconv.Atoi(ev)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", "error getting wal file size from env var")
 		os.Exit(1)
 	}
-	defaultMaxFileSize = int64(fs)
+	return int64(fs)
 }
 
-func getDefaultSize() string {
-	dsize := strconv.Itoa(3 * 4096)
-	return dsize
-}
-
-// compact checks the wal file size
-// when size exceeds predefined size `4*4096`
+// Compact checks the wal file size
+// when size exceeds predefined size
 // it triggers the compact routine
 // creates a new archive file and save it disk
-func (w *Wal) compact() {
-	// check existing wal file size
-	walInfo, err := w.getWalFileInfo()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error:[%v] getting wal file size", err)
-	}
-	if walInfo.Size() > defaultMaxFileSize {
-		fmt.Fprintf(os.Stdout, "[info]: start compacting:%s\n", walInfo.Name())
-		archive, err := createArchive(archiveFileName())
-		if err != nil {
-			fmt.Fprintf(os.Stderr,
-				"error:[%v] creating archive with name-%s\n", err, archiveFileName())
+func Compact(w *Wal) error {
+	errCh := make(chan error)
+	done := make(chan struct{})
+	go func() {
+		for {
+			<-ticker
+			// check existing wal file size
+			walInfo, err := getWalFileInfo(w.fileName.fileName)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "error:[%v] getting wal file size", err)
+				errCh <- err
+			}
+			if walInfo.Size() > defaultMaxFileSize {
+				fmt.Fprintf(os.Stdout,
+					"[info]: start compacting:%s\n", walInfo.Name())
+				// create swap file replace wal file
+				exisitingFile, err := swapWalFile(w)
+				if err != nil {
+					errCh <- err
+				}
+				// create archive file
+				archive, err := createArchive(w.archiveFileName)
+				if err != nil {
+					errCh <- err
+				}
+				// get file info for existing file
+				f, err := os.OpenFile(exisitingFile, os.O_RDONLY, fs.FileMode(os.O_RDONLY))
+				if err != nil {
+					errCh <- err
+				}
+				fInfo, err := f.Stat()
+				if err != nil {
+					errCh <- err
+				}
+				// archive the wal file
+				if err := writeToArchive(archive, f, fInfo); err != nil {
+					errCh <- err
+				}
+				// close the file
+				if err := f.Close(); err != nil {
+					errCh <- err
+				}
+				// remove old wal file
+				if err := os.Remove(exisitingFile); err != nil {
+					errCh <- err
+				}
+			}
+			done <- struct{}{}
 		}
-		if err := w.writeToArchive(archive, walInfo, archiveFileName()); err != nil {
-			fmt.Fprintf(os.Stderr, "error:[%v] writing file to archive", err)
-		}
+	}()
+	select {
+	case e := <-errCh:
+		return e
+	case <-done:
+		return nil
 	}
 }
 
-func (w *Wal) writeToArchive(archiveFile io.ReadWriter,
-	walInfo fs.FileInfo, archiveFileName string) error {
+// swapWalFile creates new wal file
+func swapWalFile(w *Wal) (string, error) {
+	now := time.Now().UnixMicro()
+	fname := fmt.Sprintf("wal-%d.txt", now)
+	existingFile := w.fileName.fileName
+	w.updWalFile(fname)
+	if err := CreateFile(w.fileName.fileName); err != nil {
+		fmt.Fprintf(os.Stderr,
+			"error-[%v] creating new wal file-%q\n",
+			err, w.fileName.fileName)
+		return existingFile, err
+	}
+	return existingFile, nil
+}
+
+// writeToArchive writes wal file into archive
+func writeToArchive(archiveFile, walFile io.ReadWriteCloser,
+	walInfo fs.FileInfo) error {
 	gzr := gzip.NewWriter(archiveFile)
 	defer gzr.Flush()
 	defer gzr.Close()
@@ -79,29 +128,24 @@ func (w *Wal) writeToArchive(archiveFile io.ReadWriter,
 	tarHeader.Name = walInfo.Name()
 	if err := twr.WriteHeader(tarHeader); err != nil {
 		fmt.Fprintf(os.Stderr,
-			"error:[%v] writing header to tar archive-%s",
-			err, archiveFileName)
+			"error:[%v] writing header to tar archive",
+			err)
 	}
-	f, err := os.OpenFile(w.fileName, os.O_RDONLY, fs.FileMode(os.O_RDONLY))
-	if err != nil {
-		fmt.Fprintf(os.Stderr,
-			"error:[%v] opening wal file-%s to copy into archive",
-			err, walInfo.Name())
-	}
-	if _, err := io.Copy(twr, f); err != nil {
+	if _, err := io.Copy(twr, walFile); err != nil {
 		fmt.Fprintf(os.Stderr,
 			"error:[%v] writing file-%s to archive-%s",
 			err, walInfo.Name(), archiveFile)
 	}
-	return f.Close()
+	return nil
 }
 
-func (w *Wal) getWalFileInfo() (fs.FileInfo, error) {
-	f, err := os.Open(w.fileName)
+func getWalFileInfo(fileName string) (fs.FileInfo, error) {
+	f, err := os.Open(fileName)
 	defer func() {
 		if err := f.Close(); err != nil {
 			fmt.Fprintf(os.Stderr,
-				"error:[%v] closing wal file-%s\n", err, w.WalFile())
+				"error:[%v] closing wal file-%q\n",
+				err, fileName)
 		}
 	}()
 	if err != nil {
@@ -124,16 +168,4 @@ func createArchive(fname string) (*os.File, error) {
 		return archiveFile, err
 	}
 	return archiveFile, err
-}
-
-// archiveFileName generates file name to be used for archive
-// with timestamp numeric in unix micro format
-// ex - archive-17188751512222238.tar
-func archiveFileName() string {
-	now := time.Now().UnixMicro()
-	fname := fmt.Sprintf("archive-%d.tar", now)
-	local := ".local"
-	home := os.Getenv("HOME")
-	fileName := filepath.Join(home, local, fname)
-	return fileName
 }

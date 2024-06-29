@@ -1,92 +1,41 @@
 package wal
 
 import (
-	"bytes"
 	"encoding/json"
 	"os"
+	"strings"
 	"sync"
 	"testing"
 
 	"github.com/ehrktia/memcache/datastructure"
 )
 
-func Test_compare_file_size(t *testing.T) {
-	// create test file and write some data
-	// for testing
-	testWal := new()
-	fileName := testWal.WalFile()
-	// test file operations
-	if err := testWal.createFile(); err != nil {
-		t.Fatal(err)
+func Test_upd_cache(t *testing.T) {
+	// create wal file
+	w := NewWal()
+	if err := CreateFile(w.fileName.fileName); err != nil {
+		t.Fatalf("error-[%v] creating file-%q", err, w.fileName.fileName)
 	}
-	// open file to add some data
-	f, err := os.OpenFile(fileName, os.O_RDWR, 0666)
-	if err != nil {
-		t.Fatal(err)
-	}
-	// add data to file
-	_, err = f.Write(
-		[]byte("this is firstline\nthis is second line\nthis is third line\n"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	f.Close()
-	// compare pointer to read till
-	got, err := testWal.compareFile()
-	if err != nil {
-		t.Fatal(err)
-	}
-	// validate
-	if !got {
-		t.Fatalf("expected-%t\tgot-%t\n", true, got)
-	}
-	t.Cleanup(func() {
-		if err := os.Remove(fileName); err != nil {
-			t.Fatal(err)
-		}
-
-	})
-}
-
-func Test_upd_in_memory_cache(t *testing.T) {
-	// create test file and write some data
-	// for testing
-	testWal := new()
-	fileName := testWal.WalFile()
-	// test file operations
-	if err := testWal.createFile(); err != nil {
-		t.Fatal(err)
-	}
-	// open file to add some data
-	f, err := os.OpenFile(fileName, os.O_RDWR, 0666)
-	if err != nil {
-		t.Fatal(err)
-	}
-	d := &datastructure.Data{
-		Key: "some-key", Value: "some-value",
-	}
-	db, err := json.Marshal(&d)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := testWal.Write(db); err != nil {
-		t.Fatal(err)
-	}
-	f.Close()
-	b := &bytes.Buffer{}
-	// initialize store to test sync
+	size := 5
 	once := &sync.Once{}
-	datastructure.NewQueue(once, 5)
-	// test upd cache
-	if err := testWal.UpdInMemoryCache(); err != nil {
-		t.Fatal(err)
+	datastructure.NewQueue(once, size)
+	d := datastructure.Data{Key: "key", Value: "value"}
+	b, err := json.Marshal(d)
+	if err != nil {
+		t.Fatalf("error-[%v] generating test data", err)
 	}
-
+	if err := UpdCache(w, b); err != nil {
+		t.Fatalf("error-[%v] updating wal and cache with %v\n", err, d)
+	}
+	v := datastructure.Get("key")
+	if strings.EqualFold(v.(string), datastructure.NotFound) {
+		t.Fatalf("got-%v\twant-%v\n", v, "value")
+	}
 	t.Cleanup(func() {
-		if err := os.Remove(fileName); err != nil {
-			t.Fatal(err)
+		if err := os.Remove(w.fileName.fileName); err != nil {
+			t.Fatalf("error-[%v] removing file", err)
 		}
-		b.Reset()
 
 	})
+
 }

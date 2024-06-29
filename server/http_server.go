@@ -6,10 +6,11 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"time"
 	"strings"
+	"time"
 
 	"github.com/ehrktia/memcache/datastructure"
+	"github.com/ehrktia/memcache/wal"
 )
 
 func NewHTTPServer() *http.Server {
@@ -28,8 +29,21 @@ func NewHTTPServer() *http.Server {
 	return s
 }
 
+type WebServer struct {
+	Wal    *wal.Wal
+	Server *http.Server
+}
 
-func Store(res http.ResponseWriter, req *http.Request) {
+func NewWebServer(w *wal.Wal, h *http.Server) *WebServer {
+	return &WebServer{
+		Wal:    w,
+		Server: h,
+	}
+}
+
+// Store receives values which are required to be stored
+// writes data to wal file
+func (w *WebServer) Store(res http.ResponseWriter, req *http.Request) {
 	defer req.Body.Close()
 	if err := reqPostMethod(req); err != nil {
 		if err := writeResponse(res, []byte(err.Error())); err != nil {
@@ -43,30 +57,20 @@ func Store(res http.ResponseWriter, req *http.Request) {
 	if err := readReqBody(buf, req, res); err != nil {
 		return
 	}
-	// extract req data
-	d, err := extractReqData(buf)
-	if err != nil {
+	// add data to wal
+	if err := wal.UpdCache(w.Wal, buf.Bytes()); err != nil {
 		if err := writeResponse(res, []byte(err.Error())); err != nil {
 			return
 		}
 	}
-
-	result, _ := datastructure.Add(d.Key, d.Value)
-	if result != nil {
-		_, err := json.Marshal(result)
-		if err != nil {
-			if err := writeResponse(res, []byte(err.Error())); err != nil {
-				return
-			}
-		}
-		if err := writeResponse(res, []byte("successfully added to cache")); err != nil {
-			return
-		}
-
+	// write response
+	if err := writeResponse(res, []byte(fmt.Sprintf("%s\n", "successfully added to cache"))); err != nil {
+		return
 	}
 }
 
-func Get(res http.ResponseWriter, req *http.Request) {
+// Get retrieves the value associated with key from in-memory cache store
+func (w *WebServer) Get(res http.ResponseWriter, req *http.Request) {
 	defer req.Body.Close()
 	if err := reqGetMethod(req); err != nil {
 		if err := writeResponse(res, []byte(err.Error())); err != nil {
@@ -86,10 +90,10 @@ func Get(res http.ResponseWriter, req *http.Request) {
 		}
 	}
 	// get data from cache
-	v:= datastructure.Get(d.Key)
+	v := datastructure.Get(d.Key)
 	// data not found
-	if strings.EqualFold(v.(string),datastructure.NotFound){
-		err := fmt.Errorf("%v matching value not found", d.Key)
+	if strings.EqualFold(v.(string), datastructure.NotFound) {
+		err := fmt.Errorf("[%v] matching %s", d.Key, datastructure.NotFound)
 		if err := writeResponse(res, []byte(err.Error())); err != nil {
 			return
 		}
@@ -102,6 +106,21 @@ func Get(res http.ResponseWriter, req *http.Request) {
 		}
 	}
 	// write response
+	if err := writeResponse(res, resultBytes); err != nil {
+		return
+	}
+}
+
+// GetAll emits all the data stored in-memory cache
+// this is expensive
+func (w *WebServer) GetAll(res http.ResponseWriter, r *http.Request) {
+	v := datastructure.GetAll()
+	resultBytes, err := json.Marshal(v)
+	if err != nil {
+		if err := writeResponse(res, []byte(fmt.Sprintf("%s\n", err.Error()))); err != nil {
+			return
+		}
+	}
 	if err := writeResponse(res, resultBytes); err != nil {
 		return
 	}
