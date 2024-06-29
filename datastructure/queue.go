@@ -26,7 +26,10 @@ func (q *queue) add(k any) {
 func (q *queue) swap(idx int) {
 	q.lock.Lock()
 	defer q.lock.Unlock()
-	q.list[0], q.list[idx] = q.list[idx], q.list[0]
+	if idx > 0 {
+		q.list[0], q.list[idx] = q.list[idx], q.list[0]
+		return
+	}
 }
 
 func (q *queue) getIdx(k any) chan int {

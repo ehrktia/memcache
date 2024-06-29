@@ -1,6 +1,7 @@
 package datastructure
 
 import (
+	"fmt"
 	"strings"
 	"sync"
 )
@@ -36,23 +37,23 @@ func buildInp(k, v any) {
 func Add(k, v any) (any, bool) {
 	buildInp(k, v)
 	go func() {
-		data := <-storeCh
-		// load data
-		_, l := inMemoryCache.LoadOrStore(data.Key, data.Value)
-		// return output
-		result <- data.Value
-		load <- l
-		// update queue
-		idx := <-inMemoryIdx.getIdx(k)
-		// add when missing
-		if idx < 0 {
-			inMemoryIdx.add(k)
+			data := <-storeCh
+			// load data
+			_, l := inMemoryCache.LoadOrStore(data.Key, data.Value)
+			// return output
+			result <- data.Value
+			load <- l
+			// update queue
+			idx := <-inMemoryIdx.getIdx(k)
+			// add when missing
+			if idx < 0 {
+				inMemoryIdx.add(k)
+			// when present move to top
 			done <- true
 			return
-		}
-		// when present move to top
-		inMemoryIdx.swap(idx)
-		done <- true
+			}
+			inMemoryIdx.swap(idx)
+			done <- true
 	}()
 	r := <-result
 	l := <-load
@@ -96,6 +97,15 @@ func Get(k any) any {
 		return NotFound
 	}
 	return out
+}
+
+func GetAll() map[string]any {
+	m := make(map[string]any)
+	inMemoryCache.Range(func(key, value any) bool {
+		m[fmt.Sprintf("%s", key)] = value
+		return true
+	})
+	return m
 }
 
 // NewQueue creates new inmemory store and queue
