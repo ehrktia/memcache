@@ -39,60 +39,49 @@ func getDefaultFileSize() int64 {
 // it triggers the compact routine
 // creates a new archive file and save it disk
 func Compact(w *Wal) error {
-	errCh := make(chan error)
-	done := make(chan struct{})
-	go func() {
-		for {
-			<-ticker
-			// check existing wal file size
-			walInfo, err := getWalFileInfo(w.fileName.fileName)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "error:[%v] getting wal file size", err)
-				errCh <- err
-			}
-			if walInfo.Size() > defaultMaxFileSize {
-				fmt.Fprintf(os.Stdout,
-					"[info]: start compacting:%s\n", walInfo.Name())
-				// create swap file replace wal file
-				exisitingFile, err := swapWalFile(w)
-				if err != nil {
-					errCh <- err
-				}
-				// create archive file
-				archive, err := createArchive(w.archiveFileName)
-				if err != nil {
-					errCh <- err
-				}
-				// get file info for existing file
-				f, err := os.OpenFile(exisitingFile, os.O_RDONLY, fs.FileMode(os.O_RDONLY))
-				if err != nil {
-					errCh <- err
-				}
-				fInfo, err := f.Stat()
-				if err != nil {
-					errCh <- err
-				}
-				// archive the wal file
-				if err := writeToArchive(archive, f, fInfo); err != nil {
-					errCh <- err
-				}
-				// close the file
-				if err := f.Close(); err != nil {
-					errCh <- err
-				}
-				// remove old wal file
-				if err := os.Remove(exisitingFile); err != nil {
-					errCh <- err
-				}
-			}
-			done <- struct{}{}
+	for {
+		<-ticker
+		// check existing wal file size
+		walInfo, err := getWalFileInfo(w.fileName.fileName)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error:[%v] getting wal file size", err)
+			return err
 		}
-	}()
-	select {
-	case e := <-errCh:
-		return e
-	case <-done:
-		return nil
+		if walInfo.Size() > defaultMaxFileSize {
+			fmt.Fprintf(os.Stdout,
+				"[info]: start compacting:%s\n", walInfo.Name())
+			// create swap file replace wal file
+			exisitingFile, err := swapWalFile(w)
+			if err != nil {
+				return err
+			}
+			// create archive file
+			archive, err := createArchive(w.archiveFileName)
+			if err != nil {
+				return err
+			}
+			// get file info for existing file
+			f, err := os.OpenFile(exisitingFile, os.O_RDONLY, fs.FileMode(os.O_RDONLY))
+			if err != nil {
+				return err
+			}
+			fInfo, err := f.Stat()
+			if err != nil {
+				return err
+			}
+			// archive the wal file
+			if err := writeToArchive(archive, f, fInfo); err != nil {
+				return err
+			}
+			// close the file
+			if err := f.Close(); err != nil {
+				return err
+			}
+			// remove old wal file
+			if err := os.Remove(exisitingFile); err != nil {
+				return err
+			}
+		}
 	}
 }
 
