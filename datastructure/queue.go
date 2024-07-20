@@ -1,6 +1,10 @@
 package datastructure
 
-import "sync"
+import (
+	"fmt"
+	"os"
+	"sync"
+)
 
 type queue struct {
 	list      []any
@@ -19,6 +23,11 @@ func new(size int) *queue {
 func (q *queue) add(k any) {
 	q.lock.Lock()
 	defer q.lock.Unlock()
+	// check if queue is full before adding
+	if q.lastAdded == len(q.list) {
+		fmt.Printf("queue is full\n")
+		os.Exit(1)
+	}
 	q.list[q.lastAdded] = k
 	q.lastAdded++
 }
