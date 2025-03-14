@@ -13,6 +13,11 @@ import (
 func Test_upd_cache(t *testing.T) {
 	// create wal file
 	w := NewWal()
+	dir, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("creating file-%s in %s", w.fileName.fileName, dir)
 	if err := CreateFile(w.fileName.fileName); err != nil {
 		t.Fatalf("error-[%v] creating file-%q", err, w.fileName.fileName)
 	}
