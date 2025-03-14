@@ -26,9 +26,9 @@ type fileName struct {
 
 // createFile checks if file exist
 // and create new file when not found
-func CreateFile(fileName string) error {
-	if !exists(fileName) {
-		_, err := os.Create(fileName)
+func CreateFile(filePath string) error {
+	if !exists(filePath) {
+		_, err := os.Create(filePath)
 		if err != nil {
 			return err
 		}
@@ -69,9 +69,20 @@ func genArchiveDir() string {
 
 // creates file if one does not exist
 func NewWal() *Wal {
+	var defaultDir string
+	var err error
+	if os.Getenv("CI") != "" {
+		defaultDir, err = os.Getwd()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "get dir err:%v\n", err)
+			os.Exit(1)
+		}
+
+	} else {
+		defaultDir = genWalDir()
+	}
 	defaultMaxFileSize = getDefaultFileSize()
 	now := time.Now().UnixMicro()
-	defaultDir := genWalDir()
 	archiveDir := genArchiveDir()
 	archiveName := fmt.Sprintf("archive-%d.tar", now)
 	walFileName := filepath.Join(defaultDir, fmt.Sprintf("wal-%d.txt", now))
