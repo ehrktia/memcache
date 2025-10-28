@@ -6,7 +6,9 @@ pub fn main() !void {
     errdefer std.posix.close(sock);
     try std.posix.connect(sock, &address.any, address.getOsSockLen());
     const message: []const u8 = "ready";
-    const send_bytes = try std.posix.send(sock, message, 0);
-    std.debug.print("{d}\n", .{send_bytes});
+    while (true) {
+        const send_bytes = try std.posix.send(sock, message, 0);
+        std.debug.print("{d}\n", .{send_bytes});
+    }
     // nc -l -u -s 224.0.0.1 -p 32100
 }
