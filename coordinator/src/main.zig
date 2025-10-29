@@ -5,8 +5,9 @@ pub fn main() !void {
     const sock = try std.posix.socket(std.posix.AF.INET, std.os.linux.SOCK.DGRAM, std.posix.IPPROTO.UDP);
     errdefer std.posix.close(sock);
     try std.posix.connect(sock, &address.any, address.getOsSockLen());
-    const message: []const u8 = "ready";
-    while (true) {
+    const message: []const u8 = "9999";
+    var count: i8 = 10;
+    while (count > 0) : (count -= 1) {
         const send_bytes = try std.posix.send(sock, message, 0);
         std.debug.print("{d}\n", .{send_bytes});
     }

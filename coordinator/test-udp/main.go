@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
 	"net"
 	"os"
@@ -21,13 +20,14 @@ func main() {
 		fmt.Printf("error:[%v] creating udp connection\n", err)
 		os.Exit(1)
 	}
-	buf := &bytes.Buffer{}
-	n, addr, err := udpConn.ReadFrom(buf.Bytes())
+	buf := make([]byte, 1024)
+	n, addr, err := udpConn.ReadFrom(buf)
 	if err != nil {
 		fmt.Printf("error:[%v] creating udp connection\n", err)
 		os.Exit(1)
 	}
 	fmt.Printf("no of bytes:%d\n", n)
 	fmt.Printf("addr:%s\n", addr.String())
+	fmt.Printf("data:%s\n", buf)
 
 }
