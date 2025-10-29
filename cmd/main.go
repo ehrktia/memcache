@@ -34,6 +34,11 @@ func main() {
 	registerHandler(mux, webServer)
 	// wait for interrupt
 	shutdown(sig)
+	// udp listener setup
+	if err := setupCoordinator(); err != nil {
+		fmt.Fprintf(os.Stderr, "error:[%v] setting up coordinator", err)
+		os.Exit(1)
+	}
 	eg, _ := errgroup.WithContext(ctx)
 	// create wal file
 	eg.Go(func() error {
@@ -45,6 +50,7 @@ func main() {
 	eg.Go(func() error {
 		return webServer.Server.ListenAndServe()
 	})
+
 	if err := eg.Wait(); err != nil {
 		fmt.Fprintf(os.Stderr, "error:%v\n", err)
 		os.Exit(1)
@@ -83,4 +89,22 @@ func getQueueSize() int {
 	}
 
 	return s
+}
+
+func setupCoordinator() error {
+	buf := make([]byte, 100)
+	coordinator := os.Getenv("COORDINATOR")
+	if coordinator == "" {
+		fmt.Fprintf(os.Stderr, "starting in standalone mode with no coordinator\n")
+		return nil
+	}
+	udpConn, err := server.UDPMultiCastListen()
+	if err != nil {
+		return err
+	}
+	if err := server.Listen(udpConn, buf); err != nil {
+		return err
+	}
+
+	return nil
 }
