@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strings"
 )
 
 const protocol = "udp"
@@ -45,7 +46,8 @@ func Listen(conn *net.UDPConn, buf []byte) error {
 	if n < 1 {
 		return fmt.Errorf("empty data received")
 	}
-	CoordinatorAddress = addr.String()
+	al := strings.Split(addr.String(), ":")
+	CoordinatorAddress = al[0]
 	CoordinatorPort = fmt.Sprintf("%s", buf)
 	return nil
 
