@@ -1,1 +1,3 @@
-{ "heartbeat": "10ms" }
+{
+    .heartbeat = "10ms",
+}

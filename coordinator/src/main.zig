@@ -4,8 +4,8 @@ const config = @import("./config.zig");
 pub fn main() !void {
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     const allocator = arena.allocator();
-    // var cfg: config.Config = .{ .heartbeat = "default", .allocator = allocator };
-    const config_value = config.read_config(allocator) catch |err| {
+    const file_location: []const u8 = "config.zgy";
+    const config_value = config.read_config(file_location, allocator) catch |err| {
         std.debug.print("error reading config from ziggy:{any}\n", .{err});
         return;
     };
@@ -15,6 +15,7 @@ pub fn main() !void {
     errdefer std.posix.close(sock);
     try std.posix.connect(sock, &address.any, address.getOsSockLen());
     const message: []const u8 = "9999";
+    // TODO: make to emit based on config
     var count: i8 = 10;
     while (count > 0) : (count -= 1) {
         const send_bytes = try std.posix.send(sock, message, 0);
