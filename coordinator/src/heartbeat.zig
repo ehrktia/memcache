@@ -2,9 +2,14 @@ const std = @import("std");
 const print = std.debug.print;
 const config = @import("./config.zig");
 var unit_idx_start: usize = undefined;
+pub const Heartbeat_Config = struct {
+    start_time: i128,
+    time_increment_interval: u64,
+    increment_unit: []const u8,
+};
 var time_lookup_store: std.hash_map.HashMap([]const u8, i128, std.hash_map.StringContext, 80) = undefined;
-// TODO: emit a struct with start time, time_increment value required
-pub fn split_interval(cfg: config.Config) !void {
+
+pub fn split_interval(cfg: config.Config) !Heartbeat_Config {
     for (cfg.heartbeat, 0..) |value, i| {
         if (value >= '0' and value <= '9') {
             continue;
@@ -14,13 +19,11 @@ pub fn split_interval(cfg: config.Config) !void {
     }
     const time_unit_value = cfg.heartbeat[unit_idx_start..];
     const time_unit = time_lookup_store.get(time_unit_value).?;
-    print("start time:{d}\n", .{time_unit});
-    print("time increment:{s}\n", .{cfg.heartbeat[0..unit_idx_start]});
-    const time_increment = std.fmt.parseInt(i32, cfg.heartbeat[0..unit_idx_start], 10) catch |err| {
+    const time_increment = std.fmt.parseInt(u64, cfg.heartbeat[0..unit_idx_start], 10) catch |err| {
         print("parse int from str error:{any}\n", .{err});
-        return;
+        return err;
     };
-    print("end time:{d}\n", .{std.time.timestamp() + time_increment});
+    return .{ .start_time = time_unit, .time_increment_interval = time_increment, .increment_unit = time_unit_value };
 }
 
 pub fn initialize_time_lookup_store(allocator: std.mem.Allocator) !void {
