@@ -1,7 +1,7 @@
 ### co-ordinator
 
 manages the sync and routing 
-- [ ] publish ip to app layer so app can send register request   
+- [x] publish ip to app layer so app can send register request   
 - [ ] build a lookup routing table using a hashmap/map data structure 
 - [ ] persist the lookup routing table  
 - [ ] config option to dynamically manage number of instances  
