@@ -36,7 +36,19 @@ this is a concurrent implementation of cache via http.
 Can be used across any service layer as a stage or landing for some data
 which you require to consume / refer / lookup
 
-**TODO**
+#### distributed
 
-- [ ] benchmark and test for disaster recovery
-- [ ] implement a leader process to have data sync between instances  
+**WIP**
+
+Coordinator  
+Will be used to manage multiple instance of cache and sync data between instances. Available in `coordinator`
+
+how to start  
+```sh
+cd coordinator && zig run src/main.zig  
+```
+
+this will start coordinator and emit 5 consecutive multicast messages with port number available for communication  
+
+testing  
+use the test implementation in go under `coordinator/test-udp` for testing this.  

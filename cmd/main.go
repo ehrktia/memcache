@@ -43,8 +43,12 @@ func main() {
 		return wal.Compact(w)
 	})
 	eg.Go(func() error {
+		return setupCoordinator()
+	})
+	eg.Go(func() error {
 		return webServer.Server.ListenAndServe()
 	})
+
 	if err := eg.Wait(); err != nil {
 		fmt.Fprintf(os.Stderr, "error:%v\n", err)
 		os.Exit(1)
@@ -83,4 +87,25 @@ func getQueueSize() int {
 	}
 
 	return s
+}
+
+func setupCoordinator() error {
+	buf := make([]byte, 100)
+	coordinator := os.Getenv("COORDINATOR")
+	if coordinator == "" {
+		fmt.Fprintf(os.Stderr, "starting in standalone mode with no coordinator\n")
+		return nil
+	}
+	udpConn, err := server.UDPMultiCastListen()
+	if err != nil {
+		return err
+	}
+	if err := server.Listen(udpConn, buf); err != nil {
+		return err
+	}
+	fmt.Fprintf(os.Stderr,
+		"coordinator address:%s:%s\n",
+		server.CoordinatorAddress, server.CoordinatorPort)
+
+	return nil
 }
