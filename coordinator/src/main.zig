@@ -7,7 +7,6 @@ pub fn main() !void {
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     const allocator = arena.allocator();
     const file_location: []const u8 = "config.zgy";
-    try heartbeat.initialize_time_lookup_store(allocator);
     const config_value = config.read_config(file_location, allocator) catch |err| {
         print("error reading config from ziggy:{any}\n", .{err});
         return;
@@ -20,10 +19,9 @@ pub fn main() !void {
     // nc -l -u -s 224.0.0.1 -p 32100
     const heartbeat_config = try heartbeat.split_interval(config_value);
     print("time_increment_interval:{d}\n", .{heartbeat_config.time_increment_interval});
-    print("increment_unit:{s}\n", .{heartbeat_config.increment_unit});
     while (true) {
         const bytes = try std.posix.send(sock, message, 0);
         print("sent heart_beat with size:{d}\tmessage with data:{s}\n", .{ bytes, message });
-        std.posix.nanosleep(heartbeat_config.time_increment_interval, std.time.ms_per_s);
+        std.posix.nanosleep(heartbeat_config.time_increment_interval, 0);
     }
 }
