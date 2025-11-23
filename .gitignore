@@ -24,3 +24,4 @@ zig-out/
 *.out
 **/*/*.svg
 **/*/*.out
+
