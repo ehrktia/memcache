@@ -2,6 +2,7 @@ const std = @import("std");
 const print = std.debug.print;
 const config = @import("./config.zig");
 const heartbeat = @import("./heartbeat.zig");
+const tcp = @import("../tcp/tcp.zig");
 
 pub fn main() !void {
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
@@ -18,7 +19,8 @@ pub fn main() !void {
     const message: []const u8 = "9999";
     // nc -l -u -s 224.0.0.1 -p 32100
     const heartbeat_config = try heartbeat.split_interval(config_value);
-    print("time_increment_interval:{d}\n", .{heartbeat_config.time_increment_interval});
+    print("time_increent_interval:{d}\n", .{heartbeat_config.time_increment_interval});
+    try tcp.tcp_server();
     while (true) {
         const bytes = try std.posix.send(sock, message, 0);
         print("sent heart_beat with size:{d}\tmessage with data:{s}\n", .{ bytes, message });

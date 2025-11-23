@@ -20,3 +20,7 @@ go.work.sum
 .zig-cache/
 zig-out/
 *.o
+*.svg
+*.out
+**/*/*.svg
+**/*/*.out

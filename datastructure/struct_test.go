@@ -1,6 +1,7 @@
 package datastructure
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 	"sync"
@@ -38,4 +39,24 @@ func Test_conc_map(t *testing.T) {
 			t.Logf("%v\n", err)
 		}
 	})
+}
+
+func TestAdd(t *testing.T) {
+	setup()
+	got, _ := Add(t.Name(), t.Name())
+	if got != t.Name() {
+		t.Fatalf("expected testname,got:%s\n", got)
+	}
+	// if replaced {
+	// 	t.Fatal("value not expected to be present")
+	// }
+}
+
+func BenchmarkAdd(b *testing.B) {
+	once := &sync.Once{}
+	i := 100
+	NewQueue(once, i)
+	for j := range i {
+		_, _ = Add(b.Name()+fmt.Sprintf("%d", j), b.Name())
+	}
 }
