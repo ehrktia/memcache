@@ -7,7 +7,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/ehrktia/memcache/datastructure"
+	"codeberg.org/ehrktia/memcache/datastructure"
 )
 
 func Test_write_to_archive(t *testing.T) {

@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ehrktia/memcache/datastructure"
-	"github.com/ehrktia/memcache/wal"
+	"codeberg.org/ehrktia/memcache/datastructure"
+	"codeberg.org/ehrktia/memcache/wal"
 )
 
 func NewHTTPServer() *http.Server {

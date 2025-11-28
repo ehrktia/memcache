@@ -10,9 +10,9 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/ehrktia/memcache/datastructure"
-	"github.com/ehrktia/memcache/server"
-	"github.com/ehrktia/memcache/wal"
+	"codeberg.org/ehrktia/memcache/datastructure"
+	"codeberg.org/ehrktia/memcache/server"
+	"codeberg.org/ehrktia/memcache/wal"
 	"golang.org/x/sync/errgroup"
 )
 

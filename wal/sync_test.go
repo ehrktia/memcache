@@ -7,7 +7,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/ehrktia/memcache/datastructure"
+	"codeberg.org/ehrktia/memcache/datastructure"
 )
 
 func Test_upd_cache(t *testing.T) {

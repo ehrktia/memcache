@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/ehrktia/memcache/datastructure"
+	"codeberg.org/ehrktia/memcache/datastructure"
 )
 
 // receive data and persist in file

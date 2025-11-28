@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/ehrktia/memcache/datastructure"
+	"codeberg.org/ehrktia/memcache/datastructure"
 )
 
 func extractReqData(b *bytes.Buffer) (*datastructure.Data, error) {

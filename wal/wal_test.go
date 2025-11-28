@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/ehrktia/memcache/datastructure"
+	"codeberg.org/ehrktia/memcache/datastructure"
 )
 
 func Test_encode_decode(t *testing.T) {

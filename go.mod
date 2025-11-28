@@ -1,4 +1,4 @@
-module github.com/ehrktia/memcache
+module codeberg.org/ehrktia/memcache
 
 go 1.24
 
