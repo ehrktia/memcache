@@ -3,6 +3,7 @@ const print = std.debug.print;
 const config = @import("./config.zig");
 const heartbeat = @import("./heartbeat.zig");
 const tcp = @import("./tcp.zig");
+const std_thread = std.Io.Threaded;
 
 pub fn main() !void {
     // var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
@@ -28,7 +29,15 @@ pub fn main() !void {
     // };
     // print("time increment interval:{d}\n", .{heartbeat_config.time_increment_interval});
     // tcp server to communicate between data layer and control layer
-    try tcp.tcp_server();
+    //
+    var arena_allocator = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    defer arena_allocator.deinit();
+    var thread = std_thread.init(arena_allocator.allocator());
+    defer thread.deinit();
+    const tcp_thread = try std.Thread.spawn(.{}, tcp.tcp_server, .{thread.io()});
+    tcp_thread.join();
+
+    // try tcp.tcp_server(thread.io());
     // while (true) {
     //     const bytes = try std.posix.send(sock, message, 0);
     //     print("sent heart_beat with size:{d}\tmessage with data:{s}\n", .{ bytes, message });
