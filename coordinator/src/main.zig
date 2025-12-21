@@ -34,13 +34,8 @@ pub fn main() !void {
     defer arena_allocator.deinit();
     var thread = std_thread.init(arena_allocator.allocator());
     defer thread.deinit();
-    const tcp_thread = try std.Thread.spawn(.{}, tcp.tcp_server, .{thread.io()});
-    tcp_thread.join();
-
-    // try tcp.tcp_server(thread.io());
-    // while (true) {
-    //     const bytes = try std.posix.send(sock, message, 0);
-    //     print("sent heart_beat with size:{d}\tmessage with data:{s}\n", .{ bytes, message });
-    //     std.posix.nanosleep(heartbeat_config.time_increment_interval, 0);
-    // }
+    while (true) {
+        const tcp_thread = try std.Thread.spawn(.{}, tcp.tcp_server, .{thread.io()});
+        tcp_thread.join();
+    }
 }
