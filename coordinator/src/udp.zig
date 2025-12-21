@@ -3,13 +3,13 @@ const print = std.debug.print;
 const net_address = std.Io.net.IpAddress;
 const net_server = @import("./server.zig");
 
-pub fn tcp_server(io: *std.Io) !void {
+pub fn udp_server(io: *std.Io) !void {
     const opts: net_address.ListenOptions = .{
         .reuse_address = true,
-        .mode = .stream,
-        .protocol = .tcp,
+        .mode = .dgram,
+        .protocol = .udp,
     };
     const srv: net_server.server = .{};
     const net_serv = try srv.init(io, opts);
-    net_serv.stream_data();
+    return net_serv.listen_data();
 }
