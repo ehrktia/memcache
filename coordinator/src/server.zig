@@ -8,6 +8,7 @@ pub const server = struct {
     const Self = @This();
     address_value: []const u8 = "::",
     port: u16 = 9999,
+    udp_port: i64 = 321000,
     std_io: std.Io = undefined,
     server_options: std.Io.net.IpAddress.ListenOptions = undefined,
     var net_server: std.Io.net.Server = undefined;
@@ -28,10 +29,12 @@ pub const server = struct {
         const data = reader.buffered();
         print("data received:{s}\n", .{data});
     }
-    var udp_buffer: [1096]u8 = undefined;
-    pub fn listen_data(self: Self) !void {
-        const message = try net_server.socket.receive(self.std_io, &udp_buffer);
-        print("from udp:{s}\n", .{message.data});
+    pub fn udp_init(self: Self, address: []const u8, port: i64, std_io: *std.Io, listen_options: std.Io.net.IpAddress.ListenOptions) Self {
+        self.udp_port = port;
+        self.address_value = address;
+        self.std_io = std_io;
+        self.server_options = listen_options;
+        return Self;
     }
 };
 
@@ -57,4 +60,20 @@ test "init" {
     try std.testing.expect(net_server.port > 0);
     print("address-{s}\n", .{net_server.address_value});
     net_server.stream_data();
+}
+
+test "init_with_address" {
+    const opts = std.Io.net.IpAddress.ListenOptions{
+        .reuse_address = true,
+        .mode = .dgram,
+        .protocol = .udp,
+    };
+    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+    var thread = std_thread.init(allocator);
+    defer thread.deinit();
+    var io_thread = thread.io();
+    const u_server: server = .{};
+    _ = try u_server.udp_init("224.0.0.1", 321000, &io_thread, opts);
 }
