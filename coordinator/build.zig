@@ -82,8 +82,8 @@ pub fn build(b: *std.Build) void {
             },
         }),
     });
-    const ziggy_mod = b.dependency("ziggy", .{});
-    exe.root_module.addImport("ziggy", ziggy_mod.module("ziggy"));
+    // const ziggy_mod = b.dependency("ziggy", .{});
+    // exe.root_module.addImport("ziggy", ziggy_mod.module("ziggy"));
     // This declares intent for the executable to be installed into the
     // install prefix when running `zig build` (i.e. when executing the default
     // step). By default the install prefix is `zig-out/` but can be overridden

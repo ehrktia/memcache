@@ -3,18 +3,20 @@ const print = std.debug.print;
 const net_address = std.Io.net.IpAddress;
 const std_thread = std.Io.Threaded;
 
-pub const server = struct {
+var net_server: std.Io.net.Server = undefined;
+pub const udp_server = struct {
     const Self = @This();
+    address: []const u8 = "224.0.0.1",
+    port: u16 = 3210,
     server_options: std.Io.net.IpAddress.ListenOptions = undefined,
-    var net_server: std.Io.net.Server = undefined;
-    pub fn init(address: []const u8, port: u16, std_io: std.Io, opts: std.Io.net.IpAddress.BindOptions) !void {
-        const server_address = try net_address.parse(address, port);
-        const socket = try server_address.bind(std_io, opts);
-        var udp_buffer: [1096]u8 = undefined;
-        const incoming_message = try socket.receive(std_io, &udp_buffer);
-        print("{s}\n", .{incoming_message.data});
-    }
 };
+pub fn init(self: udp_server, std_io: std.Io, opts: std.Io.net.IpAddress.BindOptions) !void {
+    const server_address = try net_address.parse(self.address, self.port);
+    const socket = try server_address.bind(std_io, opts);
+    var udp_buffer: [1096]u8 = undefined;
+    const incoming_message = try socket.receive(std_io, &udp_buffer);
+    print("{s}\n", .{incoming_message.data});
+}
 
 // =============================================================
 // =================== unit test ===============================
@@ -27,5 +29,6 @@ test "init" {
     const allocator = arena.allocator();
     var thread = std_thread.init(allocator);
     defer thread.deinit();
-    _ = try server.init("0.0.0.0", 3210, thread.io(), opts);
+    const udp_listen_server: udp_server = .{};
+    try init(udp_listen_server, thread.io(), opts);
 }
