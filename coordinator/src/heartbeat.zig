@@ -7,14 +7,14 @@ pub const Heartbeat_Config = struct {
 };
 
 pub fn split_interval(cfg: config.Config) !Heartbeat_Config {
-    for (cfg.heartbeat, 0..) |value, i| {
+    for (cfg.heart_beat, 0..) |value, i| {
         if (value >= '0' and value <= '9') {
             continue;
         }
         unit_idx_start = i;
         break;
     }
-    const time_increment = std.fmt.parseInt(u64, cfg.heartbeat[0..unit_idx_start], 10) catch |err| {
+    const time_increment = std.fmt.parseInt(u64, cfg.heart_beat[0..unit_idx_start], 10) catch |err| {
         print("parse int from str error:{any}\n", .{err});
         return err;
     };

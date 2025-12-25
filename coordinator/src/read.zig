@@ -13,7 +13,7 @@ test "read_file" {
     defer arena.deinit();
     var thread = std.Io.Threaded.init(arena.allocator());
     defer thread.deinit();
-    const data = try read_file(thread.ioBasic(), "config.zgy", arena.allocator());
+    const data = try read_file(thread.ioBasic(), "config.json", arena.allocator());
     print("data:{s}\n", .{data});
     try std.testing.expect(data.len > 0);
 }
