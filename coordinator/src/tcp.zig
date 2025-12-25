@@ -1,11 +1,11 @@
 const std = @import("std");
 const print = std.debug.print;
 const net_address = std.Io.net.IpAddress;
-const std_id = std.Io;
 const std_thread = std.Io.Threaded;
 
 var net_server: std.Io.net.Server = undefined;
 var net_stream: std.Io.net.Stream = undefined;
+
 pub const tcp_server = struct {
     const Self = @This();
     address_value: []const u8 = "::",
