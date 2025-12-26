@@ -2,17 +2,15 @@ const std = @import("std");
 const print = std.debug.print;
 const panic = std.debug.panic;
 const config = @import("./config.zig");
-const heartbeat = @import("./heartbeat.zig");
 const net_address = std.Io.net.IpAddress;
 const std_thread = std.Io.Threaded;
 
 const message = "9999";
-pub fn read_config_from_file(io: std.Io, allocator: std.mem.Allocator) !void {
-    const file_location = "config.json";
-    const config_value = try config.read_config(io, file_location, allocator);
-    const heart_beat_interval = try heartbeat.split_interval(config_value);
+pub fn read_config_from_file(io: std.Io, allocator: std.mem.Allocator) !u64 {
+    const file_location = "config.zgy";
+    try config.read_zgy(io, file_location, allocator);
     // TODO: make the udp emit message for this interval using Io.Sleep
-    print("heart beat interval:{d}\n", .{heart_beat_interval.time_increment_interval});
+    return config.heart_beat;
 }
 
 var net_server: std.Io.net.Server = undefined;
@@ -22,6 +20,7 @@ pub const udp_server = struct {
     port: u16 = 3210,
     server_options: std.Io.net.IpAddress.ListenOptions = undefined,
 };
+
 pub fn init(self: udp_server, std_io: std.Io, opts: std.Io.net.IpAddress.BindOptions) !void {
     const server_address = try net_address.parse(self.address, self.port);
     const socket = try server_address.bind(std_io, opts);
@@ -48,5 +47,6 @@ test "read_config" {
     var thread: std.Io.Threaded = std_thread.init(arena.allocator());
     defer arena.deinit();
     defer thread.deinit();
-    try read_config_from_file(thread.ioBasic(), arena.allocator());
+    const hbeat = try read_config_from_file(thread.ioBasic(), arena.allocator());
+    try std.testing.expect(hbeat.time_increment_interval > 0);
 }

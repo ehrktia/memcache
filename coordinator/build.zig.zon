@@ -32,10 +32,10 @@
     // Once all dependencies are fetched, `zig build` no longer requires
     // internet connectivity.
     .dependencies = .{
-        // .ziggy = .{
-        //     .url = "git+https://github.com/kristoff-it/ziggy.git#852053b09a5f8f5b79ca880f86ea77fc7da3dd6c",
-        //     .hash = "ziggy-0.1.0-kTg8vwR1BgALu5bIsNMQrQ2h2tpD8P-8Ax-1WjLU3Cuf",
-        // },
+        .ziggy = .{
+            .url = "git+https://github.com/kristoff-it/ziggy.git#852053b09a5f8f5b79ca880f86ea77fc7da3dd6c",
+            .hash = "ziggy-0.1.0-kTg8vwR1BgALu5bIsNMQrQ2h2tpD8P-8Ax-1WjLU3Cuf",
+        },
     },
     .paths = .{
         "build.zig",

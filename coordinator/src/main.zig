@@ -2,7 +2,6 @@ const std = @import("std");
 const print = std.debug.print;
 const tcp = @import("./tcp.zig");
 const config = @import("./config.zig");
-const heartbeat = @import("./heartbeat.zig");
 const udp = @import("./udp.zig");
 const std_thread = std.Io.Threaded;
 
@@ -13,7 +12,8 @@ pub fn main() !void {
     var thread_io = thread.io();
     defer thread.deinit();
     // config file heartbeat interval
-    try udp.read_config_from_file(thread_io, arena_allocator.allocator());
+    const h_beat = try udp.read_config_from_file(thread_io, arena_allocator.allocator());
+    print("heart beat:{d}\n", .{h_beat});
     const tcp_stream_server: tcp.tcp_server = .{};
     const tcp_opts = std.Io.net.IpAddress.ListenOptions{
         .reuse_address = true,
