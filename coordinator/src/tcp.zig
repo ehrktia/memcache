@@ -23,11 +23,14 @@ pub const tcp_server = struct {
     }
 };
 var buffer: [1096]u8 = undefined;
-pub fn stream_data(self: tcp_server) void {
-    var stream_reader = net_stream.reader(self.std_io, &buffer);
+pub fn stream_data(server: tcp_server) void {
+    print("ready to receive data....", .{});
+    var stream_reader = net_stream.reader(server.std_io, &buffer);
     var reader = &stream_reader.interface;
     const data = reader.buffered();
-    print("data received:{s}\n", .{data});
+    if (data.len > 0) {
+        print("data received:{s}\n", .{data});
+    }
 }
 
 // =======================================================
