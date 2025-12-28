@@ -36,6 +36,7 @@ pub fn main() !void {
 fn send_heart_beat(io: std.Io, socket: std.Io.net.Socket, address: *std.Io.net.IpAddress, message: []const u8) !void {
     print("sending message-{s}\n", .{message});
     var count: usize = 0;
+    // TODO: make it infinite loop with sleep timer matching heartbeat
     while (count < 25) : (count += 1) {
         print("count={d}\n", .{count});
         try socket.send(io, address, message);
