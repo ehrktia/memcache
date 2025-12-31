@@ -2,6 +2,7 @@ const std = @import("std");
 const print = std.debug.print;
 const net_address = std.Io.net.IpAddress;
 const std_thread = std.Io.Threaded;
+const panic = std.debug.panic;
 
 var net_server: std.Io.net.Server = undefined;
 var net_stream: std.Io.net.Stream = undefined;
@@ -15,21 +16,32 @@ pub const tcp_server = struct {
     pub fn init(self: Self, std_io: *std.Io, listen_options: std.Io.net.IpAddress.ListenOptions) !tcp_server {
         const server_address = try net_address.parse(self.address_value, self.port);
         net_server = try net_address.listen(server_address, std_io.*, listen_options);
-        // net_stream = net_server.accept(std_io.*) catch |e| {
-        //     std.debug.panic("error accepting server:{any}\n", .{e});
-        //     return;
-        // };
+        net_stream = try net_server.accept(std_io.*);
         return tcp_server{ .server_options = listen_options, .std_io = std_io.* };
     }
 };
-var buffer: [1096]u8 = undefined;
-pub fn stream_data(server: tcp_server) void {
+pub fn stream_data(server: tcp_server) !void {
     print("ready to receive data....\n", .{});
-    var stream_reader = net_stream.reader(server.std_io, &buffer);
-    var reader = &stream_reader.interface;
-    const data = reader.buffered();
-    if (data.len > 0) {
-        print("data received:{s}\n", .{data});
+    {
+        const handle_thread = try std.Thread.spawn(.{}, read_data_from_stream, .{server});
+        defer handle_thread.join();
+    }
+}
+
+fn read_data_from_stream(server: tcp_server) !void {
+    var buffer: [1096]u8 = undefined;
+    var reader = net_stream.reader(server.std_io, &buffer);
+    var count: usize = 0;
+    while (count <= 5) : (count += 1) {
+        // while (true) {
+        const read_size = reader.interface.takeDelimiterInclusive('\n') catch |e| {
+            if (e == error.EndOfStream) {
+                print("client closed connection \n", .{});
+                continue;
+            }
+            return e;
+        };
+        print("read:{s}\n", .{read_size});
     }
 }
 
@@ -50,17 +62,19 @@ test "init" {
     defer thread.deinit();
     var io_thread = thread.io();
     const nt_server: tcp_server = .{};
-    const tcp_stream_server = try tcp_server.init(nt_server, &io_thread, opts);
+    var tcp_stream_server = try tcp_server.init(nt_server, &io_thread, opts);
     try std.testing.expect(tcp_stream_server.address_value.len > 0);
     try std.testing.expect(tcp_stream_server.port > 0);
-    const address = try std.Io.net.IpAddress.parse(tcp_stream_server.address_value, tcp_stream_server.port);
-    const tcp_server_thread = try std.Thread.spawn(.{}, stream_data, .{tcp_stream_server});
-    const tcp_read = try std.Thread.spawn(.{}, read_data, .{ io_thread, address });
-    tcp_server_thread.join();
-    tcp_read.join();
+    const address = try net_address.parse(tcp_stream_server.address_value, tcp_stream_server.port);
+    {
+        const tcp_server_thread = try std.Thread.spawn(.{}, stream_data, .{tcp_stream_server});
+        defer tcp_server_thread.join();
+        const write_data = try std.Thread.spawn(.{}, write_data_to_stream, .{ io_thread, address });
+        defer write_data.join();
+    }
 }
 
-fn read_data(io: std.Io, address: std.Io.net.IpAddress) !void {
+fn write_data_to_stream(io: std.Io, address: std.Io.net.IpAddress) !void {
     const opts = std.Io.net.IpAddress.ConnectOptions{
         .mode = .stream,
         .protocol = .tcp,
@@ -68,13 +82,8 @@ fn read_data(io: std.Io, address: std.Io.net.IpAddress) !void {
     };
     const msg = try std.Io.net.IpAddress.connect(address, io, opts);
     defer msg.close(io);
-    const file = std.Io.File.stdin();
-    var buf: [1096]u8 = undefined;
-    buf[0] = "some test data";
-    var data_to_send: [][]u8 = buf;
-    std.Io.File.writeStreaming(file, io, &data_to_send);
-    var fs_reader = std.Io.File.reader(file, io, &buf);
-    const reader = &fs_reader.interface;
-    const data = reader.buffered();
-    print("data:{s}\n", .{data});
+    var buf: [100]u8 = undefined;
+    var writer = msg.writer(io, &buf);
+    try writer.interface.writeAll("data from client");
+    try writer.interface.flush();
 }
