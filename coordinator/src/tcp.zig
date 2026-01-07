@@ -21,15 +21,16 @@ pub const tcp_server = struct {
 };
 
 pub fn start_server(server: tcp_server, io: std.Io, opts: std.Io.net.IpAddress.ListenOptions) !void {
+    const address = try std.Io.net.IpAddress.parse(server.address_value, server.port);
+    // TODO: impl new threaded
+    var stream = try net_address.listen(address, std.testing.io, opts);
     var client: std.Io.net.Stream = undefined;
     defer {
         client.close(io);
+        stream.deinit(io);
     }
-    const address = try std.Io.net.IpAddress.parse(server.address_value, server.port);
     while (true) {
         std.debug.print("starting server...\n", .{});
-        var stream = try net_address.listen(address, std.testing.io, opts);
-        defer stream.deinit(io);
         client = try stream.accept(io);
         try group.concurrent(io, stream_data, .{ client, io });
     }
