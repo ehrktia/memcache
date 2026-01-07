@@ -6,42 +6,42 @@ const panic = std.debug.panic;
 
 var net_server: std.Io.net.Server = undefined;
 var net_stream: std.Io.net.Stream = undefined;
+var group: std.Io.Group = .init;
 
 pub const tcp_server = struct {
     const Self = @This();
-    address_value: []const u8 = "::",
+    address_value: []const u8 = "0.0.0.0",
     port: u16 = 9999,
     std_io: std.Io = undefined,
     server_options: std.Io.net.IpAddress.ListenOptions = undefined,
-    pub fn init(self: Self, std_io: *std.Io, listen_options: std.Io.net.IpAddress.ListenOptions) !tcp_server {
-        const server_address = try net_address.parse(self.address_value, self.port);
-        net_server = try net_address.listen(server_address, std_io.*, listen_options);
-        net_stream = try net_server.accept(std_io.*);
-        return tcp_server{ .server_options = listen_options, .std_io = std_io.* };
+    pub fn init(self: Self, std_io: std.Io, listen_options: std.Io.net.IpAddress.ListenOptions) !tcp_server {
+        _ = self;
+        return tcp_server{ .server_options = listen_options, .std_io = std_io };
     }
 };
-pub fn stream_data(server: tcp_server) !void {
-    print("ready to receive data....\n", .{});
-    {
-        const handle_thread = try std.Thread.spawn(.{}, read_data_from_stream, .{server});
-        defer handle_thread.join();
+
+pub fn start_server(server: tcp_server, io: std.Io, opts: std.Io.net.IpAddress.ListenOptions) !void {
+    var client: std.Io.net.Stream = undefined;
+    defer {
+        client.close(io);
+    }
+    const address = try std.Io.net.IpAddress.parse(server.address_value, server.port);
+    while (true) {
+        std.debug.print("starting server...\n", .{});
+        var stream = try net_address.listen(address, std.testing.io, opts);
+        defer stream.deinit(io);
+        client = try stream.accept(io);
+        try group.concurrent(io, stream_data, .{ client, io });
     }
 }
 
-fn read_data_from_stream(server: tcp_server) !void {
-    var buffer: [1096]u8 = undefined;
-    var reader = net_stream.reader(server.std_io, &buffer);
-    var count: usize = 0;
-    while (count <= 5) : (count += 1) {
-        // while (true) {
-        const read_size = reader.interface.takeDelimiterInclusive('\n') catch |e| {
-            if (e == error.EndOfStream) {
-                print("client closed connection \n", .{});
-                continue;
-            }
-            return e;
-        };
-        print("read:{s}\n", .{read_size});
+fn stream_data(client: std.Io.net.Stream, io: std.Io) void {
+    std.debug.print("reading data from server\n", .{});
+    var buf: [127]u8 = undefined;
+    var client_reader = client.reader(io, &buf);
+    const data = client_reader.interface.takeDelimiterInclusive('\n') catch unreachable;
+    if (data.len > 0) {
+        std.debug.print("data:{s}\n", .{data});
     }
 }
 
@@ -55,35 +55,31 @@ test "init" {
         .mode = .stream,
         .protocol = .tcp,
     };
-    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-    defer arena.deinit();
-    const allocator = arena.allocator();
-    var thread = std_thread.init(allocator);
-    defer thread.deinit();
-    var io_thread = thread.io();
+    const connect_opts = std.Io.net.IpAddress.ConnectOptions{
+        .mode = .stream,
+        .protocol = .tcp,
+    };
     const nt_server: tcp_server = .{};
-    var tcp_stream_server = try tcp_server.init(nt_server, &io_thread, opts);
+    var tcp_stream_server = try tcp_server.init(nt_server, std.testing.io, opts);
     try std.testing.expect(tcp_stream_server.address_value.len > 0);
     try std.testing.expect(tcp_stream_server.port > 0);
     const address = try net_address.parse(tcp_stream_server.address_value, tcp_stream_server.port);
-    {
-        const tcp_server_thread = try std.Thread.spawn(.{}, stream_data, .{tcp_stream_server});
-        defer tcp_server_thread.join();
-        const write_data = try std.Thread.spawn(.{}, write_data_to_stream, .{ io_thread, address });
-        defer write_data.join();
-    }
+    _ = std.Io.async(std.testing.io, start_server, .{ tcp_stream_server, std.testing.io, opts });
+    try std.Io.sleep(std.testing.io, std.Io.Duration{ .nanoseconds = 100000 }, std.Io.Clock.awake);
+    var client_async = std.Io.async(std.testing.io, write_data_to_stream, .{ address, std.testing.io, connect_opts });
+    try client_async.await(std.testing.io);
 }
 
-fn write_data_to_stream(io: std.Io, address: std.Io.net.IpAddress) !void {
-    const opts = std.Io.net.IpAddress.ConnectOptions{
-        .mode = .stream,
-        .protocol = .tcp,
-        .timeout = .none,
+fn write_data_to_stream(address: std.Io.net.IpAddress, io: std.Io, opts: std.Io.net.IpAddress.ConnectOptions) !void {
+    std.debug.print("starting client\n", .{});
+    const client_stream = address.connect(io, opts) catch |e| {
+        std.debug.print("error connecting to server:{s}\n", .{@errorName(e)});
+        return;
     };
-    const msg = try std.Io.net.IpAddress.connect(address, io, opts);
-    defer msg.close(io);
-    var buf: [100]u8 = undefined;
-    var writer = msg.writer(io, &buf);
-    try writer.interface.writeAll("data from client");
-    try writer.interface.flush();
+    defer client_stream.close(io);
+    var buffer: [124]u8 = undefined;
+    var client_writer = client_stream.writer(io, &buffer);
+    try client_writer.interface.writeAll("some data from client\n");
+    try client_writer.interface.flush();
+    std.debug.print("sent data...\n", .{});
 }

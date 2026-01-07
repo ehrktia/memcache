@@ -26,10 +26,11 @@ pub fn main() !void {
     const udp_socket = try udp_address.bind(thread_io, udp_opts);
     defer udp_socket.close(thread_io);
     while (true) {
-        const tcp_thread = try std.Thread.spawn(.{}, tcp.stream_data, .{tcp_stream});
-        const udp_thread = try std.Thread.spawn(.{}, send_heart_beat, .{ thread_io, udp_socket, &udp_address, "9999" });
-        tcp_thread.join();
-        udp_thread.join();
+        _ = std.Io.async(thread_io, tcp.start_server, .{ tcp_stream, thread_io, tcp_opts });
+        // const tcp_thread = try std.Thread.spawn(.{}, tcp.stream_data, .{tcp_stream});
+        _ = try std.Io.async(thread_io, send_heart_beat, .{ thread_io, udp_socket, &udp_address, "9999" });
+        // tcp_thread.join();
+        // udp_thread.join();
     }
 }
 
