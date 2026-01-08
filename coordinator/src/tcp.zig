@@ -14,7 +14,7 @@ pub const tcp_server = struct {
     port: u16 = 9999,
     std_io: std.Io = undefined,
     server_options: std.Io.net.IpAddress.ListenOptions = undefined,
-    pub fn init(self: Self, std_io: std.Io, listen_options: std.Io.net.IpAddress.ListenOptions) !tcp_server {
+    pub fn init(self: Self, std_io: std.Io, listen_options: std.Io.net.IpAddress.ListenOptions) tcp_server {
         _ = self;
         return tcp_server{ .server_options = listen_options, .std_io = std_io };
     }
@@ -22,15 +22,14 @@ pub const tcp_server = struct {
 
 pub fn start_server(server: tcp_server, io: std.Io, opts: std.Io.net.IpAddress.ListenOptions) !void {
     const address = try std.Io.net.IpAddress.parse(server.address_value, server.port);
-    // TODO: impl new threaded
-    var stream = try net_address.listen(address, std.testing.io, opts);
+    var stream = try net_address.listen(address, io, opts);
     var client: std.Io.net.Stream = undefined;
     defer {
         client.close(io);
         stream.deinit(io);
     }
+    std.debug.print("starting server...\n", .{});
     while (true) {
-        std.debug.print("starting server...\n", .{});
         client = try stream.accept(io);
         try group.concurrent(io, stream_data, .{ client, io });
     }
@@ -61,7 +60,7 @@ test "init" {
         .protocol = .tcp,
     };
     const nt_server: tcp_server = .{};
-    var tcp_stream_server = try tcp_server.init(nt_server, std.testing.io, opts);
+    var tcp_stream_server = tcp_server.init(nt_server, std.testing.io, opts);
     try std.testing.expect(tcp_stream_server.address_value.len > 0);
     try std.testing.expect(tcp_stream_server.port > 0);
     const address = try net_address.parse(tcp_stream_server.address_value, tcp_stream_server.port);
