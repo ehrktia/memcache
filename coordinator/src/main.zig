@@ -3,15 +3,15 @@ const print = std.debug.print;
 const tcp = @import("./tcp.zig");
 const config = @import("./config.zig");
 const std_thread = std.Io.Threaded;
-
+var heart_beat: u64 = undefined;
 pub fn main() !void {
     var arena_allocator = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer arena_allocator.deinit();
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     var threaded = std.Io.Threaded.init(arena.allocator(), .{});
     defer threaded.deinit();
-    const h_beat = try config.read_config_from_file(threaded.io(), arena_allocator.allocator());
-    print("heart beat:{d}\n", .{h_beat});
+    heart_beat = try config.read_config_from_file(threaded.io(), arena_allocator.allocator());
+    print("heart beat:{d}\n", .{heart_beat});
     const tcp_stream_server: tcp.tcp_server = .{};
     const tcp_opts = std.Io.net.IpAddress.ListenOptions{
         .reuse_address = true,
@@ -28,10 +28,23 @@ pub fn main() !void {
     try udp_heart_beat.await(threaded.io());
 }
 
+fn convert_to_sec() void {
+    heart_beat = heart_beat * 1000000000;
+}
+
 fn send_heart_beat(io: std.Io, socket: std.Io.net.Socket, address: *std.Io.net.IpAddress, message: []const u8) !void {
-    // TODO: fix heartbeat interval based emit message
     while (true) {
-        print("sending message-{s}\n", .{message});
+        try std.Io.sleep(io, std.Io.Duration{ .nanoseconds = heart_beat * 1000000000 }, std.Io.Clock.awake);
         try socket.send(io, address, message);
     }
+}
+
+// ======================================================================
+// ============================== test unit =============================
+// ======================================================================
+
+test "convert" {
+    heart_beat = 9;
+    convert_to_sec();
+    std.debug.print("heart_beat:{d}\n", .{heart_beat});
 }

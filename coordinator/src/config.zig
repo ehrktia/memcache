@@ -37,7 +37,6 @@ pub fn read_config(io: std.Io, file_name: []const u8, allocator: std.mem.Allocat
 pub fn read_config_from_file(io: std.Io, allocator: std.mem.Allocator) !u64 {
     const file_location = "config.zgy";
     try read_zgy(io, file_location, allocator);
-    // TODO: make the udp emit message for this interval using Io.Sleep
     return heart_beat;
 }
 
