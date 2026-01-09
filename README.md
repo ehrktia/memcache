@@ -3,11 +3,7 @@
 in memory cache via http api   
 
 
-<video controls width="640">
-  <source src=".docs/demo.mp4" type="video/mp4">
-  Your browser does not support MP4 videos.
-</video>
-
+<video src="docs/demo.mp4" type="video/mp4" controls width="800"></video>
 
 
 **start locally**   
