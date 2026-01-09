@@ -3,8 +3,7 @@
 in memory cache via http api   
 
 
-<video src="docs/demo.mp4" type="video/mp4" controls width="800"></video>
-
+<iframe src="https://player.vimeo.com/video/1152877214?title=0&amp;byline=0&amp;portrait=0&amp;badge=0&amp;autopause=0&amp;player_id=0&amp;app_id=58479" frameborder="0" allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share" referrerpolicy="strict-origin-when-cross-origin" style="position:absolute;top:0;left:0;width:100%;height:100%;" title="memcache_demo"></iframe>
 
 **start locally**   
 
