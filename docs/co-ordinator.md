@@ -7,8 +7,8 @@ manages the sync and routing
 - [ ] config option to dynamically manage number of instances  
 - [ ] have a prepare req for each commit which supplies a uuid to caller who requires a txn  
 - [ ] keeps txn log which records status of txn  
-- [ ] write local test for TCP and UDP testing
-- [ ] optimise Dockerfile and image size
+- [x] write local test for TCP and UDP testing
+- [x] optimise Dockerfile and image size
 
 
 

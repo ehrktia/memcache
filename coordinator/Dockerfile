@@ -1,8 +1,10 @@
-FROM debian:stable
-COPY . .
-RUN cp src/config.zgy ./zig-out/bin/
-RUN chmod a+x zig-out/bin/coordinator && chmod a+x zig-out/bin/config.zgy && \
-ls -lart zig-out/bin
-CMD ["zig-out/bin/coordinator"]
+FROM alpine:3.23.2
+RUN mkdir -p /app
+WORKDIR /app
+COPY ./config.zgy .
+COPY ./zig-out/bin/coordinator .
+RUN ls -lart .
+EXPOSE 9999/tcp
+CMD ["/app/coordinator"]
 
 

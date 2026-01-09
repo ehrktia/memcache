@@ -1,6 +1,13 @@
 ### memcache
 
-in memory cache via http api
+in memory cache via http api   
+
+**start locally**   
+
+```sh
+COORDINATOR=true go run cmd/main.go
+```
+
 
 #### endpoints
 
@@ -45,10 +52,26 @@ Will be used to manage multiple instance of cache and sync data between instance
 
 how to start  
 ```sh
-cd coordinator && zig run src/main.zig  
+cd coordinator && zig build run  
 ```
 
 this will start coordinator and emit 5 consecutive multicast messages with port number available for communication  
 
+**container**   
+To build image from root of the project   
+
+```sh
+podman build -t coordinator:latest --squash-all -f coordinator/Dockerfile ./coordinator/
+```
+
+To run the container 
+
+```sh
+podman run --name coordinator --publish-all -h coordinator -d localhost/coordinator:latest
+```
+
+
+
+
 testing  
-use the test implementation in go under `coordinator/test-udp` for testing this.  
+- run the local version of coordinator and use the go run command to test
