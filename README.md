@@ -7,7 +7,7 @@ in memory cache via http api
 ```sh
 COORDINATOR=true go run cmd/main.go
 ```
-
+![video](docs/demo.webm "demo") 
 
 #### endpoints
 
