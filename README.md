@@ -2,12 +2,22 @@
 
 in memory cache via http api   
 
+
+<video controls width="640">
+  <source src=".docs/demo.mp4" type="video/mp4">
+  Your browser does not support MP4 videos.
+</video>
+
+
+
 **start locally**   
 
 ```sh
 COORDINATOR=true go run cmd/main.go
 ```
-![video](docs/demo.webm "demo") 
+
+
+
 
 #### endpoints
 
